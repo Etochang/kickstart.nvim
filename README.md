@@ -1,14 +1,35 @@
-# kickstart.nvim
+# Personal Neovim configuration
 
 ## Introduction
 
-A starting point for Neovim that is:
+A productivity-focused Neovim configuration based on kickstart.nvim that is:
 
 * Small
-* Single-file
+* Modular
 * Completely Documented
 
-**NOT** a Neovim distribution, but instead a starting point for your configuration.
+**NOT** a Neovim distribution: each plugin and behavior remains explicit and
+easy to change.
+
+### Configuration layout
+
+`init.lua` is intentionally a short, ordered entry point. Core editor behavior
+lives in `lua/config/`, plugin setup lives in topic-based files under
+`lua/plugins/`, and machine- or workflow-specific additions belong in
+`lua/custom/plugins/`.
+
+```text
+init.lua                 Load order and orientation
+lua/config/options.lua   Editor defaults and diagnostics
+lua/config/keymaps.lua   Plugin-independent mappings
+lua/config/autocmds.lua  Editor events
+lua/config/pack.lua      vim.pack helpers and build hooks
+lua/plugins/*.lua        UI, navigation, Git, LSP, formatting, and tools
+lua/custom/plugins/      Personal extensions loaded automatically
+```
+
+The files retain descriptive comments so the configuration remains useful as
+a learning reference without forcing every subsystem into one large file.
 
 ## Installation
 
@@ -127,9 +148,8 @@ cancels them).
 
 #### Read The Friendly Documentation
 
-Read through the `init.lua` file in your configuration folder for more
-information about extending and exploring Neovim. That also includes
-examples of adding popularly requested plugins.
+Start with `init.lua`, then follow the documented modules under `lua/config/`
+and `lua/plugins/` for more information about extending and exploring Neovim.
 
 > [!NOTE]
 > For more information about a particular plugin check its repository's documentation.
@@ -159,16 +179,9 @@ examples of adding popularly requested plugins.
 * What if I want to "uninstall" this configuration:
   * Remove your config directory and local data directory (for example,
     `~/.config/nvim` and `~/.local/share/nvim`).
-* Why is the kickstart `init.lua` a single file? Wouldn't it make sense to split it into multiple files?
-  * The main purpose of kickstart is to serve as a teaching tool and a reference
-    configuration that someone can easily use to `git clone` as a basis for their own.
-    As you progress in learning Neovim and Lua, you might consider splitting `init.lua`
-    into smaller parts. A fork of kickstart that does this while maintaining the
-    same functionality is available here:
-    * [kickstart-modular.nvim](https://github.com/dam9000/kickstart-modular.nvim)
-  * Discussions on this topic can be found here:
-    * [Restructure the configuration](https://github.com/nvim-lua/kickstart.nvim/issues/218)
-    * [Reorganize init.lua into a multi-file setup](https://github.com/nvim-lua/kickstart.nvim/pull/473)
+* Why is this configuration split into modules?
+  * Topic-based modules keep related options, explanations, and mappings close
+    together while leaving `init.lua` as a readable map of the whole setup.
 
 ### Install Recipes
 

@@ -19,11 +19,26 @@ require('conform').setup {
     if supported[vim.bo[bufnr].filetype] then return { timeout_ms = 500 } end
   end,
   default_format_opts = { lsp_format = 'fallback' },
+  formatters = {
+    -- Keep C/C++ at the editor's four-space default when a project does not
+    -- provide a .clang-format. ClangFormat only accepts named presets through
+    -- --fallback-style, so select the inline fallback ourselves while yielding
+    -- to a repository's own formatting policy when one is present.
+    ['clang-format'] = {
+      prepend_args = function(_, ctx)
+        local project_style = vim.fs.find({ '.clang-format', '_clang-format' }, { path = ctx.dirname, upward = true })[1]
+        if project_style then return {} end
+        return {
+          '--style={BasedOnStyle: LLVM, IndentWidth: 4, TabWidth: 4, UseTab: Never, AllowShortFunctionsOnASingleLine: None}',
+        }
+      end,
+    },
+  },
   formatters_by_ft = {
     lua = { 'stylua' },
     python = { 'ruff_format' },
-    c = { 'clang_format' },
-    cpp = { 'clang_format' },
+    c = { 'clang-format' },
+    cpp = { 'clang-format' },
   },
 }
 

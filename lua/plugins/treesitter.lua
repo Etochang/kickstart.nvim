@@ -25,6 +25,7 @@ local parsers = {
   'query',
   'vim',
   'vimdoc',
+  'yaml',
 }
 require('nvim-treesitter').install(parsers)
 

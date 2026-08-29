@@ -8,6 +8,7 @@ local gh = require('config.pack').gh
 vim.pack.add {
   gh 'nvim-neotest/neotest',
   gh 'nvim-neotest/neotest-python',
+  gh 'orjangj/neotest-ctest',
   gh 'stevearc/overseer.nvim',
 }
 
@@ -18,6 +19,7 @@ local neotest = require 'neotest'
 neotest.setup {
   adapters = {
     require 'neotest-python' { dap = { justMyCode = false } },
+    require('neotest-ctest').setup { dap_adapter = 'codelldb' },
   },
 }
 

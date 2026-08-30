@@ -135,6 +135,36 @@ The structural `af`, `if`, `ac`, and `ic` objects work in Visual and
 operator-pending modes. Examples include `daf` to delete a function and `vif`
 to select its body.
 
+### Breadcrumbs, folds, minimap, and notifications
+
+The winbar above each normal editing window shows the current file and nested
+LSP or Tree-sitter context. Nested delimiters are colored by depth automatically.
+
+| Action | Key |
+| --- | --- |
+| Pick a path or symbol from the breadcrumb | `<Leader>;` |
+| Jump to the current context's beginning | `[;` |
+| Select the next breadcrumb context | `];` |
+| Toggle the minimap | `<Leader>mm` |
+| Move focus into/out of the minimap | `<Leader>mf` |
+| Move the minimap to the other side | `<Leader>ms` |
+| Open all folds | `zR` |
+| Close all folds | `zM` |
+| Preview the closed fold under the cursor | `zK` |
+| Show notification history | `<Leader>nh` |
+| Dismiss visible notifications | `<Leader>nd` |
+
+Ordinary fold commands still work: `za` toggles the fold under the cursor,
+`zo` opens it, and `zc` closes it. The minimap marks search matches,
+diagnostics, and Git changes; press `<CR>` after focusing it to return to the
+corresponding source location. Files above Snacks' big-file threshold skip
+expensive language and animation features automatically.
+
+Starting `nvim` without a file opens a dashboard with file search, text search,
+recent files, projects, config access, and session restore. Its single-letter
+actions are shown directly on the dashboard; `nvim .` still opens the requested
+directory rather than replacing it with the dashboard.
+
 ## LSP and diagnostics
 
 These mappings exist when a language server is attached:

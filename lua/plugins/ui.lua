@@ -11,6 +11,7 @@ vim.pack.add {
   gh 'rebelot/kanagawa.nvim',
   gh 'folke/todo-comments.nvim',
   gh 'nvim-mini/mini.nvim',
+  gh 'sphamba/smear-cursor.nvim',
   gh 'windwp/nvim-autopairs',
   gh 'lukas-reineke/indent-blankline.nvim',
 }
@@ -32,7 +33,8 @@ require('which-key').setup {
     { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
     { '<leader>d', group = '[D]ebug' },
     { '<leader>r', group = '[R]efactor', mode = { 'n', 'v' } },
-    { '<leader>m', group = '[M]arkdown' },
+    { '<leader>m', group = '[M]arkdown / map' },
+    { '<leader>n', group = '[N]otifications' },
     { '<leader>t', group = '[T]est / toggle' },
     { '<leader>q', group = 'Session' },
     { '<leader>c', group = '[C]ode / cleanup' },
@@ -45,14 +47,46 @@ require('which-key').setup {
 require('kanagawa').setup {
   transparent = true,
   commentStyle = { italic = false },
-  overrides = function()
+  overrides = function(colors)
+    local palette = colors.palette
     return {
       NormalFloat = { bg = 'none' },
       FloatBorder = { bg = 'none' },
+      -- Keep Rainbow Delimiters inside Kanagawa's existing visual language.
+      RainbowDelimiterRed = { fg = palette.waveRed },
+      RainbowDelimiterYellow = { fg = palette.carpYellow },
+      RainbowDelimiterBlue = { fg = palette.crystalBlue },
+      RainbowDelimiterOrange = { fg = palette.surimiOrange },
+      RainbowDelimiterGreen = { fg = palette.springGreen },
+      RainbowDelimiterViolet = { fg = palette.oniViolet },
+      RainbowDelimiterCyan = { fg = palette.lightBlue },
     }
   end,
 }
 vim.cmd.colorscheme 'kanagawa-wave'
+
+-- Give cursor movement a lightweight trail in both Normal and Insert mode.
+-- Cursor animation in mini.animate is disabled below so only one plugin draws
+-- cursor motion. `:SmearCursorToggle` remains available for distraction-free
+-- sessions, screen sharing, or terminals where the effect is too expensive.
+require('smear_cursor').setup {
+  smear_between_buffers = true,
+  smear_between_neighbor_lines = true,
+  scroll_buffer_space = true,
+  smear_insert_mode = true,
+  stiffness = 0.9,
+  trailing_stiffness = 0.7,
+  damping = 0.95,
+  anticipation = 0.3,
+  time_interval = 10,
+  stiffness_insert_mode = 0.8,
+  trailing_stiffness_insert_mode = 0.8,
+  damping_insert_mode = 0.95,
+  legacy_computing_symbols_support = true,
+  legacy_computing_symbols_support_vertical_bars = true,
+  use_diagonal_blocks = true,
+  matrix_pixel_threshold = 0.5,
+}
 
 -- Highlight TODO/FIXME/NOTE-style annotations and expose them to Telescope.
 require('todo-comments').setup { signs = true }
@@ -95,6 +129,27 @@ require('mini.align').setup()
 -- Make accidental trailing whitespace visible and provide an explicit cleanup.
 require('mini.trailspace').setup()
 vim.keymap.set('n', '<leader>cW', MiniTrailspace.trim, { desc = '[C]lean trailing [W]hitespace' })
+
+-- Smooth large scrolls and window layout changes without making ordinary
+-- motions feel delayed. Smear Cursor owns cursor animation; keeping the
+-- remaining animations near 100 ms makes them visible but still responsive.
+local animate = require 'mini.animate'
+animate.setup {
+  cursor = { enable = false },
+  scroll = {
+    timing = animate.gen_timing.linear { duration = 150, unit = 'total' },
+    subscroll = animate.gen_subscroll.equal { max_output_steps = 30 },
+  },
+  resize = {
+    timing = animate.gen_timing.linear { duration = 120, unit = 'total' },
+  },
+  open = {
+    timing = animate.gen_timing.linear { duration = 120, unit = 'total' },
+  },
+  close = {
+    timing = animate.gen_timing.linear { duration = 120, unit = 'total' },
+  },
+}
 
 -- A compact statusline is enough because Telescope and dedicated views expose
 -- deeper project state on demand.

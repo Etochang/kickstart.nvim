@@ -1,0 +1,479 @@
+// Movement Practice: a deliberately varied TypeScript program
+// Use this file to practice words, lines, paragraphs, brackets, searches, and jumps.
+
+type Priority = "low" | "normal" | "high" | "urgent";
+type Identifier = string & { readonly __brand: unique symbol };
+
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+interface Task {
+  id: Identifier;
+  title: string;
+  description: string;
+  priority: Priority;
+  completed: boolean;
+  tags: string[];
+  location?: Coordinates;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface TaskFilter {
+  query?: string;
+  priorities?: Priority[];
+  completed?: boolean;
+  tags?: string[];
+  createdAfter?: Date;
+}
+
+const DEFAULT_PRIORITIES: readonly Priority[] = [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+];
+
+const SAMPLE_TITLES = [
+  "Refactor the wandering parser",
+  "Document the peculiar endpoint",
+  "Investigate the midnight timeout",
+  "Replace the temporary adapter",
+  "Measure the rendering pipeline",
+  "Simplify the nested conditionals",
+  "Review the authentication flow",
+  "Archive the obsolete fixtures",
+] as const;
+
+function createIdentifier(value: string): Identifier {
+  if (!/^[a-z0-9-]{6,64}$/i.test(value)) {
+    throw new Error(`Invalid identifier: ${value}`);
+  }
+
+  return value as Identifier;
+}
+
+function normalizeText(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+class TaskRepository {
+  readonly #tasks = new Map<Identifier, Task>();
+  #revision = 0;
+
+  get revision(): number {
+    return this.#revision;
+  }
+
+  add(task: Task): void {
+    if (this.#tasks.has(task.id)) {
+      throw new Error(`Task ${task.id} already exists`);
+    }
+
+    this.#tasks.set(task.id, structuredClone(task));
+    this.#revision += 1;
+  }
+
+  update(id: Identifier, changes: Partial<Omit<Task, "id" | "createdAt">>): Task {
+    const current = this.#tasks.get(id);
+
+    if (current === undefined) {
+      throw new Error(`Cannot update missing task ${id}`);
+    }
+
+    const updated: Task = {
+      ...current,
+      ...changes,
+      id: current.id,
+      createdAt: current.createdAt,
+      updatedAt: new Date(),
+    };
+
+    this.#tasks.set(id, updated);
+    this.#revision += 1;
+    return structuredClone(updated);
+  }
+
+  remove(id: Identifier): boolean {
+    const removed = this.#tasks.delete(id);
+
+    if (removed) {
+      this.#revision += 1;
+    }
+
+    return removed;
+  }
+
+  find(id: Identifier): Task | undefined {
+    const task = this.#tasks.get(id);
+    return task === undefined ? undefined : structuredClone(task);
+  }
+
+  search(filter: TaskFilter = {}): Task[] {
+    const normalizedQuery = filter.query && normalizeText(filter.query);
+
+    return Array.from(this.#tasks.values())
+      .filter((task) => {
+        if (filter.completed !== undefined && task.completed !== filter.completed) {
+          return false;
+        }
+
+        if (filter.priorities && !filter.priorities.includes(task.priority)) {
+          return false;
+        }
+
+        if (filter.tags && !filter.tags.every((tag) => task.tags.includes(tag))) {
+          return false;
+        }
+
+        if (filter.createdAfter && task.createdAt <= filter.createdAfter) {
+          return false;
+        }
+
+        if (normalizedQuery) {
+          const haystack = normalizeText(`${task.title} ${task.description}`);
+          return haystack.includes(normalizedQuery);
+        }
+
+        return true;
+      })
+      .map((task) => structuredClone(task));
+  }
+
+  clear(): void {
+    if (this.#tasks.size > 0) {
+      this.#tasks.clear();
+      this.#revision += 1;
+    }
+  }
+}
+
+class EventBus<EventMap extends Record<string, unknown>> {
+  readonly #listeners = new Map<keyof EventMap, Set<(value: any) => void>>();
+
+  subscribe<Key extends keyof EventMap>(
+    event: Key,
+    listener: (value: EventMap[Key]) => void,
+  ): () => void {
+    const listeners = this.#listeners.get(event) ?? new Set();
+    listeners.add(listener);
+    this.#listeners.set(event, listeners);
+
+    return () => {
+      listeners.delete(listener);
+
+      if (listeners.size === 0) {
+        this.#listeners.delete(event);
+      }
+    };
+  }
+
+  publish<Key extends keyof EventMap>(event: Key, value: EventMap[Key]): void {
+    for (const listener of this.#listeners.get(event) ?? []) {
+      listener(value);
+    }
+  }
+}
+
+type ApplicationEvents = {
+  "task:created": Task;
+  "task:updated": Task;
+  "task:removed": Identifier;
+  "sync:finished": { count: number; elapsedMs: number };
+};
+
+class TaskService {
+  constructor(
+    private readonly repository: TaskRepository,
+    private readonly events: EventBus<ApplicationEvents>,
+  ) {}
+
+  create(input: {
+    title: string;
+    description?: string;
+    priority?: Priority;
+    tags?: string[];
+  }): Task {
+    const now = new Date();
+    const randomPart = Math.random().toString(36).slice(2, 10);
+    const task: Task = {
+      id: createIdentifier(`task-${randomPart}`),
+      title: input.title.trim(),
+      description: input.description?.trim() ?? "",
+      priority: input.priority ?? "normal",
+      completed: false,
+      tags: [...new Set(input.tags ?? [])],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (task.title.length < 3) {
+      throw new RangeError("A task title must contain at least three characters");
+    }
+
+    this.repository.add(task);
+    this.events.publish("task:created", task);
+    return task;
+  }
+
+  complete(id: Identifier): Task {
+    const updated = this.repository.update(id, { completed: true });
+    this.events.publish("task:updated", updated);
+    return updated;
+  }
+
+  postpone(id: Identifier, reason: string): Task {
+    const task = this.repository.find(id);
+
+    if (!task) {
+      throw new Error(`Task not found: ${id}`);
+    }
+
+    const updated = this.repository.update(id, {
+      description: `${task.description}\n\nPostponed: ${reason}`.trim(),
+      priority: task.priority === "urgent" ? "high" : task.priority,
+    });
+
+    this.events.publish("task:updated", updated);
+    return updated;
+  }
+
+  discard(id: Identifier): void {
+    if (this.repository.remove(id)) {
+      this.events.publish("task:removed", id);
+    }
+  }
+}
+
+function groupByPriority(tasks: readonly Task[]): Map<Priority, Task[]> {
+  const groups = new Map<Priority, Task[]>(
+    DEFAULT_PRIORITIES.map((priority) => [priority, []]),
+  );
+
+  for (const task of tasks) {
+    groups.get(task.priority)?.push(task);
+  }
+
+  return groups;
+}
+
+function calculateDistance(from: Coordinates, to: Coordinates): number {
+  const earthRadiusKm = 6_371;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = toRadians(to.latitude - from.latitude);
+  const longitudeDelta = toRadians(to.longitude - from.longitude);
+  const firstLatitude = toRadians(from.latitude);
+  const secondLatitude = toRadians(to.latitude);
+
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(firstLatitude) *
+      Math.cos(secondLatitude) *
+      Math.sin(longitudeDelta / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+async function retry<Value>(
+  operation: () => Promise<Value>,
+  options: { attempts: number; initialDelayMs: number },
+): Promise<Value> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < options.attempts) {
+        const delay = options.initialDelayMs * 2 ** (attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+async function* paginate<Value>(
+  fetchPage: (cursor?: string) => Promise<{ items: Value[]; cursor?: string }>,
+): AsyncGenerator<Value> {
+  let cursor: string | undefined;
+
+  do {
+    const page = await fetchPage(cursor);
+
+    for (const item of page.items) {
+      yield item;
+    }
+
+    cursor = page.cursor;
+  } while (cursor !== undefined);
+}
+
+function renderTask(task: Task): string {
+  const marker = task.completed ? "x" : " ";
+  const location = task.location
+    ? ` @ ${task.location.latitude.toFixed(3)},${task.location.longitude.toFixed(3)}`
+    : "";
+  const tags = task.tags.length > 0 ? ` #${task.tags.join(" #")}` : "";
+
+  return `[${marker}] (${task.priority.padEnd(6)}) ${task.title}${tags}${location}`;
+}
+
+function renderReport(tasks: readonly Task[]): string {
+  const divider = "-".repeat(72);
+  const groups = groupByPriority(tasks);
+  const sections: string[] = ["TASK REPORT", divider];
+
+  for (const [priority, groupedTasks] of groups) {
+    sections.push(`\n${priority.toUpperCase()} (${groupedTasks.length})`);
+
+    if (groupedTasks.length === 0) {
+      sections.push("  No tasks in this section.");
+      continue;
+    }
+
+    for (const task of groupedTasks) {
+      sections.push(`  ${renderTask(task)}`);
+    }
+  }
+
+  const completedCount = tasks.filter(({ completed }) => completed).length;
+  const percentage = tasks.length === 0 ? 0 : (completedCount / tasks.length) * 100;
+
+  sections.push("", divider);
+  sections.push(`Completed: ${completedCount}/${tasks.length} (${percentage.toFixed(1)}%)`);
+  return sections.join("\n");
+}
+
+function createSampleTasks(service: TaskService): Task[] {
+  const descriptions = [
+    "Trace each branch carefully before changing the implementation.",
+    "Compare the expected behavior against the current test fixtures.",
+    "Keep the public interface stable while simplifying internal details.",
+    "Collect useful timings from a representative local workload.",
+  ];
+
+  return SAMPLE_TITLES.map((title, index) =>
+    service.create({
+      title,
+      description: descriptions[index % descriptions.length],
+      priority: DEFAULT_PRIORITIES[index % DEFAULT_PRIORITIES.length],
+      tags: index % 2 === 0 ? ["engineering", "focus"] : ["maintenance"],
+    }),
+  );
+}
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) {
+    throw new Error(`Assertion failed: ${message}`);
+  }
+}
+
+function runRepositoryChecks(): void {
+  const repository = new TaskRepository();
+  const events = new EventBus<ApplicationEvents>();
+  const service = new TaskService(repository, events);
+  const observed: string[] = [];
+
+  const unsubscribeCreated = events.subscribe("task:created", (task) => {
+    observed.push(`created:${task.id}`);
+  });
+
+  const unsubscribeUpdated = events.subscribe("task:updated", (task) => {
+    observed.push(`updated:${task.id}`);
+  });
+
+  const task = service.create({
+    title: "Verify repository behavior",
+    priority: "high",
+    tags: ["test", "repository", "test"],
+  });
+
+  assert(repository.revision === 1, "adding a task increments the revision");
+  assert(task.tags.length === 2, "duplicate tags are removed");
+  assert(repository.search({ priorities: ["high"] }).length === 1, "priority search works");
+
+  service.complete(task.id);
+  assert(repository.find(task.id)?.completed === true, "completion is persisted");
+  assert(observed.length === 2, "creation and update events are published");
+
+  unsubscribeCreated();
+  unsubscribeUpdated();
+  service.discard(task.id);
+  assert(repository.search().length === 0, "discarded tasks disappear");
+}
+
+async function simulateRemoteSync(tasks: readonly Task[]): Promise<number> {
+  let uploaded = 0;
+
+  for (const task of tasks) {
+    await retry(
+      async () => {
+        const response = { ok: true, status: 202, taskId: task.id };
+
+        if (!response.ok) {
+          throw new Error(`Upload failed with status ${response.status}`);
+        }
+
+        uploaded += 1;
+      },
+      { attempts: 3, initialDelayMs: 10 },
+    );
+  }
+
+  return uploaded;
+}
+
+async function main(): Promise<void> {
+  runRepositoryChecks();
+
+  const repository = new TaskRepository();
+  const events = new EventBus<ApplicationEvents>();
+  const service = new TaskService(repository, events);
+  const eventLog: string[] = [];
+
+  events.subscribe("task:created", ({ id, title }) => {
+    eventLog.push(`Created ${id}: ${title}`);
+  });
+
+  events.subscribe("task:updated", ({ id, completed }) => {
+    eventLog.push(`Updated ${id}; completed=${completed}`);
+  });
+
+  events.subscribe("sync:finished", ({ count, elapsedMs }) => {
+    eventLog.push(`Synchronized ${count} tasks in ${elapsedMs.toFixed(2)} ms`);
+  });
+
+  const tasks = createSampleTasks(service);
+  service.complete(tasks[1].id);
+  service.complete(tasks[4].id);
+  service.postpone(tasks[3].id, "Waiting for benchmark data from the staging environment.");
+
+  const startedAt = performance.now();
+  const synchronized = await simulateRemoteSync(repository.search());
+  const elapsedMs = performance.now() - startedAt;
+  events.publish("sync:finished", { count: synchronized, elapsedMs });
+
+  console.log(renderReport(repository.search()));
+  console.log("\nEVENT LOG\n" + "=".repeat(72));
+
+  for (const [index, entry] of eventLog.entries()) {
+    console.log(`${String(index + 1).padStart(2, "0")}. ${entry}`);
+  }
+}
+
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  console.error("Fatal application error:\n", message);
+  process.exitCode = 1;
+});
+

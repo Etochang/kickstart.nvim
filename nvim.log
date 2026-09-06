@@ -1,2 +1,5 @@
 WRN 2026-08-31T04:04:45.448 ?.24178    server_start:197: Failed to start server: operation not permitted: /var/folders/58/9bnwtf_d4g75kg4ngjwzxn0r0000gn/T/nvim.orangachang/iZLMaC/nvim.24178.0
 WRN 2026-08-31T04:05:08.904 ?.24277    server_start:197: Failed to start server: operation not permitted: /var/folders/58/9bnwtf_d4g75kg4ngjwzxn0r0000gn/T/nvim.orangachang/8IAkil/nvim.24277.0
+WRN 2026-09-06T00:40:38.242 ?.94037    server_start:197: Failed to start server: operation not permitted: /var/folders/58/9bnwtf_d4g75kg4ngjwzxn0r0000gn/T/nvim.orangachang/gPhKBN/nvim.94037.0
+WRN 2026-09-06T00:40:38.254 ?.94039    server_start:197: Failed to start server: operation not permitted: /var/folders/58/9bnwtf_d4g75kg4ngjwzxn0r0000gn/T/nvim.orangachang/YkAwSH/nvim.94039.0
+WRN 2026-09-06T00:40:38.257 ?.94040    server_start:197: Failed to start server: operation not permitted: /var/folders/58/9bnwtf_d4g75kg4ngjwzxn0r0000gn/T/nvim.orangachang/noDfzM/nvim.94040.0

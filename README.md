@@ -24,6 +24,7 @@ lua/config/options.lua   Editor defaults and diagnostics
 lua/config/keymaps.lua   Plugin-independent mappings
 lua/config/autocmds.lua  Editor events
 lua/config/pack.lua      vim.pack helpers and build hooks
+lua/config/platform.lua  OS capabilities and native build selection
 lua/plugins/*.lua        UI, navigation, Git, LSP, formatting, and tools
 lua/custom/plugins/      Personal extensions loaded automatically
 ```
@@ -35,50 +36,59 @@ a learning reference without forcing every subsystem into one large file.
 
 ### Install Neovim
 
-Kickstart.nvim targets *only* the latest
-['stable'](https://github.com/neovim/neovim/releases/tag/stable) and latest
-['nightly'](https://github.com/neovim/neovim/releases/tag/nightly) of Neovim.
-If you are experiencing issues, please make sure you have at least the latest
-stable version. Most likely, you want to install neovim via a [package
-manager](https://github.com/neovim/neovim/blob/master/INSTALL.md#install-from-package).
-To check your neovim version, run `nvim --version` and make sure it is not
-below the latest
-['stable'](https://github.com/neovim/neovim/releases/tag/stable) version. If
-your chosen install method only gives you an outdated version of neovim, find
-alternative [installation methods below](#alternative-neovim-installation-methods).
+This configuration requires **Neovim 0.12 or newer** because it uses
+`vim.pack` and nvim-treesitter's current `main` branch. Install the current
+[stable or nightly release](https://github.com/neovim/neovim/releases) and
+verify it with `nvim --version`. If a distribution package is too old, use one
+of the [alternative installation methods](#alternative-neovim-installation-methods).
 
 ### Install External Dependencies
 
-External Requirements:
-- Basic utils: `git`, `make`, `unzip`, C Compiler (`gcc`)
-- [ripgrep](https://github.com/BurntSushi/ripgrep#installation),
-  [fd-find](https://github.com/sharkdp/fd#installation)
-- [tree-sitter CLI](https://github.com/tree-sitter/tree-sitter/blob/master/crates/cli/README.md#installation)
-- Clipboard tool (xclip/xsel/win32yank or other depending on the platform)
-- A [Nerd Font](https://www.nerdfonts.com/): optional, provides various icons
-  - if you have it set `vim.g.have_nerd_font` in `init.lua` to true
-- Emoji fonts (Ubuntu only, and only if you want emoji!) `sudo apt install fonts-noto-color-emoji`
-- Language Setup:
-  - If you want to write Typescript, you need `npm`
-  - If you want to write Golang, you will need `go`
-  - etc.
+Core requirements:
+
+* `git`, `curl`, `tar`, a C/C++ compiler, and
+  [ripgrep](https://github.com/BurntSushi/ripgrep#installation)
+* [tree-sitter CLI](https://github.com/tree-sitter/tree-sitter/blob/master/crates/cli/README.md#installation)
+  0.26.1 or newer; install it from a package manager or prebuilt release, not npm
+* [fd](https://github.com/sharkdp/fd#installation), which is optional but makes
+  file finding faster
+* Node.js 22 or newer for Copilot completion and npm-backed Mason tools
+* Python 3 with pip/venv for Python-backed Mason tools and tests
+* A [Nerd Font](https://www.nerdfonts.com/), which is optional but supplies icons
+  (set `vim.g.have_nerd_font` in `init.lua` to `true` after installing one)
+
+Workflow-specific requirements:
+
+* PowerShell plus 7-Zip or an equivalent extractor on Windows for Mason
+* CMake/Make for Telescope's optional native sorter; Telescope falls back safely
+  when neither exists
+* Python/pytest for Python testing, and CMake/Ninja/GoogleTest for C/C++ testing
+* `copilot`, `yazi`/`ya`, and `sqlite3` for the corresponding optional workflows
+
+Language-specific servers, debuggers, linters, and formatters are installed
+through Mason when available. Other SDKs (`go`, Rust, an embedded cross-
+toolchain, and so on) remain project dependencies.
+
+* [Native Windows setup and caveats](WINDOWS.md)
+* [Everyday command and workflow reference](WORKFLOWS.md)
 
 > [!NOTE]
-> See [Install Recipes](#Install-Recipes) for additional Windows and Linux specific notes
-> and quick install snippets
+> See [Windows setup](WINDOWS.md) or the
+> [install recipes](#install-recipes) for platform-specific notes.
 
 ### Install Kickstart
 
 > [!NOTE]
-> [Backup](#FAQ) your previous configuration (if any exists)
+> [Back up](#faq) your previous configuration (if any exists).
 
-Neovim's configurations are located under the following paths, depending on your OS:
+Neovim's configuration is located under the following paths, depending on the
+operating system:
 
 | OS | PATH |
 | :- | :--- |
 | Linux, MacOS | `$XDG_CONFIG_HOME/nvim`, `~/.config/nvim` |
-| Windows (cmd)| `%localappdata%\nvim\` |
-| Windows (powershell)| `$env:LOCALAPPDATA\nvim\` |
+| Windows (cmd) | `%localappdata%\nvim\` |
+| Windows (PowerShell) | `$env:LOCALAPPDATA\nvim\` |
 
 #### Recommended Step
 
@@ -162,20 +172,31 @@ and `lua/plugins/` for more information about extending and exploring Neovim.
 ### FAQ
 
 * What should I do if I already have a pre-existing Neovim configuration?
-  * You should back it up and then delete all associated files.
-  * This includes your existing init.lua and the Neovim files in `~/.local`
-    which can be deleted with `rm -rf ~/.local/share/nvim/`
+  * Rename the existing configuration and data directories so the backup stays
+    recoverable. On Unix these are usually `~/.config/nvim` and
+    `~/.local/share/nvim`; on Windows they are usually
+    `$env:LOCALAPPDATA\nvim` and `$env:LOCALAPPDATA\nvim-data`.
 * Can I keep my existing configuration in parallel to kickstart?
   * Yes! You can use [NVIM_APPNAME](https://neovim.io/doc/user/starting.html#%24NVIM_APPNAME)`=nvim-NAME`
     to maintain multiple configurations. For example, you can install the kickstart
     configuration in `~/.config/nvim-kickstart` and create an alias:
-    ```
+
+    ```sh
     alias nvim-kickstart='NVIM_APPNAME="nvim-kickstart" nvim'
     ```
+
     When you run Neovim using `nvim-kickstart` alias it will use the alternative
     config directory and the matching local directory
     `~/.local/share/nvim-kickstart`. You can apply this approach to any Neovim
     distribution that you would like to try out.
+    In PowerShell, the equivalent setting lasts for the remainder of that
+    PowerShell session:
+
+    ```powershell
+    $env:NVIM_APPNAME = 'nvim-kickstart'
+    nvim
+    Remove-Item Env:NVIM_APPNAME
+    ```
 * What if I want to "uninstall" this configuration:
   * Remove your config directory and local data directory (for example,
     `~/.config/nvim` and `~/.local/share/nvim`).
@@ -191,64 +212,30 @@ After installing all the dependencies continue with the [Install Kickstart](#ins
 
 #### Windows Installation
 
-<details><summary>Windows with Microsoft C++ Build Tools and CMake</summary>
-Kickstart's default config is make-only for `telescope-fzf-native.nvim`.
-If `make` is unavailable, the plugin is skipped.
+Use the dedicated [native Windows guide](WINDOWS.md). It covers WinGet
+dependencies, PowerShell, Tree-sitter, Copilot, Yazi, native build tools,
+testing, WSL separation, and keyboard/terminal caveats. The configuration now
+selects Telescope's CMake build automatically on native Windows; it no longer
+needs a Windows-only edit to `init.lua`.
 
-Recommended: install `make` (see the chocolatey section below).
-
-If you want a CMake-only setup, customize `init.lua` in two places:
-
-1. Include `telescope-fzf-native.nvim` when `cmake` is available:
-
-```lua
-if vim.fn.executable 'make' == 1 or vim.fn.executable 'cmake' == 1 then
-  table.insert(plugins, gh 'nvim-telescope/telescope-fzf-native.nvim')
-end
-```
-
-2. In the `PackChanged` hook, use CMake when `make` is unavailable:
-
-```lua
-if name == 'telescope-fzf-native.nvim' then
-  if vim.fn.executable 'make' == 1 then
-    run_build(name, { 'make' }, ev.data.path)
-  elseif vim.fn.executable 'cmake' == 1 then
-    run_build(name, { 'cmake', '-S.', '-Bbuild', '-DCMAKE_BUILD_TYPE=Release' }, ev.data.path)
-    run_build(name, { 'cmake', '--build', 'build', '--config', 'Release', '--target', 'install' }, ev.data.path)
-  end
-  return
-end
-```
-
-See `telescope-fzf-native` documentation for [build details](https://github.com/nvim-telescope/telescope-fzf-native.nvim#installation).
-</details>
-<details><summary>Windows with gcc/make using chocolatey</summary>
-Alternatively, one can install gcc and make which don't require changing the config,
-the easiest way is to use choco:
-
-1. install [chocolatey](https://chocolatey.org/install)
-either follow the instructions on the page or use winget,
-run in cmd as **admin**:
-```
-winget install --accept-source-agreements chocolatey.chocolatey
-```
-
-2. install all requirements using choco, exit the previous cmd and
-open a new one so that choco path is set, and run in cmd as **admin**:
-```
-choco install -y neovim git ripgrep wget fd unzip gzip mingw make tree-sitter
-```
-</details>
 <details><summary>WSL (Windows Subsystem for Linux)</summary>
+
+Treat WSL as a separate Linux machine. Install the config and all generated
+plugins, parsers, Mason tools, and Copilot authentication inside WSL; do not
+share the native Windows `nvim-data` directory.
 
 ```
 wsl --install
 wsl
 sudo add-apt-repository ppa:neovim-ppa/unstable -y
 sudo apt update
-sudo apt install make gcc ripgrep fd-find tree-sitter-cli unzip git xclip neovim
+sudo apt install make gcc ripgrep fd-find unzip git xclip curl tar neovim
 ```
+
+Package versions vary by WSL distribution. Also install Node.js 22+ and
+tree-sitter CLI 0.26.1+ using the verified methods in
+[External Dependencies](#install-external-dependencies), then confirm both with
+`node --version` and `tree-sitter --version` before the first launch.
 </details>
 
 #### Linux Install

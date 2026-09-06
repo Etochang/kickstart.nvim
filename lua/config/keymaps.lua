@@ -18,12 +18,8 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 -- Match VS Code's Problems navigation and the keyboard's layer-2 encoder.
 -- The diagnostic jump callback in options.lua opens the message at each stop.
-vim.keymap.set('n', '<F8>', function()
-  vim.diagnostic.jump { count = 1 }
-end, { desc = 'Next diagnostic' })
-vim.keymap.set('n', '<S-F8>', function()
-  vim.diagnostic.jump { count = -1 }
-end, { desc = 'Previous diagnostic' })
+vim.keymap.set('n', '<F8>', function() vim.diagnostic.jump { count = 1 } end, { desc = 'Next diagnostic' })
+vim.keymap.set('n', '<S-F8>', function() vim.diagnostic.jump { count = -1 } end, { desc = 'Previous diagnostic' })
 
 -- Neovim 0.12 ships an interactive undo-tree UI as an optional builtin plugin.
 -- Loading it on demand avoids installing a third-party undo visualizer.

@@ -19,6 +19,13 @@ cd /path/to/project
 nvim .
 ```
 
+In PowerShell, the equivalent is:
+
+```powershell
+Set-Location C:\path\to\project
+nvim .
+```
+
 Then repeat this loop:
 
 1. Find a file with `<Leader>sf` or search code with `<Leader>sg`.
@@ -86,6 +93,7 @@ also clears highlighting left by the previous search.
 | Tree-sitter-aware jump/selection | `S` |
 | Next/previous buffer | `]b` / `[b` |
 | Next/previous diagnostic | `]d` / `[d` |
+| Next/previous diagnostic from the keyboard layer | `<F8>` / `<S-F8>` |
 | Next/previous quickfix item | `]q` / `[q` |
 | Next/previous Git hunk | `]c` / `[c` |
 
@@ -399,13 +407,22 @@ details.
 
 ### Python tests
 
-Create a project environment and install pytest:
+Create a project environment and install pytest on macOS/Linux:
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install pytest
 pytest
+```
+
+On Windows PowerShell, call the environment's Python directly. This works even
+when PowerShell's execution policy prevents activation scripts:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install pytest
+.\.venv\Scripts\python.exe -m pytest
 ```
 
 Open Neovim from that project root. In a `test_*.py` or `*_test.py` file:
@@ -461,6 +478,11 @@ Run the complete suite independently of Neotest:
 :OverseerShell ctest --test-dir build --output-on-failure
 ```
 
+The Ninja commands above are intentionally portable to Windows. If a project
+instead selects Visual Studio's multi-configuration generator, omit
+`CMAKE_BUILD_TYPE` while configuring and add `--config Debug` to the build plus
+`-C Debug` to CTest. See [WINDOWS.md](WINDOWS.md) for exact commands.
+
 After each command has been created once, `<Leader>tl` restarts the latest one.
 A fast inner loop is:
 
@@ -478,7 +500,7 @@ Neotest-CTest does not compile tests. A successful build and a discoverable
 Keep these separate:
 
 1. **Host unit tests:** algorithms, state machines, parsing, validation, and HAL
-   behavior through fakes or mocks. Run constantly on the Mac.
+   behavior through fakes or mocks. Run constantly on the host workstation.
 2. **Cross-build:** compile and link the real firmware to catch toolchain,
    linker-script, memory-size, and target-definition problems.
 3. **Simulator/emulator tests:** use them when the SDK provides a useful model.
@@ -523,9 +545,11 @@ test filter to DAP. During an active debug session:
 | Conditional breakpoint | `<Leader>dB` |
 | Open DAP REPL | `<Leader>dr` |
 
-The installed `codelldb` adapter handles native macOS C/C++ test binaries. An
-embedded target additionally needs its cross-debugger, probe/server such as
-OpenOCD or J-Link, and target-specific DAP launch/attach configuration.
+The installed `codelldb` adapter handles common native macOS/Linux and
+LLVM/MinGW C/C++ test binaries on Windows. MSVC/PDB projects may require a
+different adapter. An embedded target additionally needs its cross-debugger,
+probe/server such as OpenOCD or J-Link, and target-specific DAP launch/attach
+configuration.
 
 ## CodeCompanion and Copilot workflows
 
@@ -722,6 +746,7 @@ Prefer `<Leader>qs` after starting `nvim .` in a familiar project. Use
 | Read help | `:help <topic>` |
 | Run built-in tutorial | `:Tutor` |
 | Check all integrations | `:checkhealth` |
+| Check this config's host requirements | `:checkhealth kickstart` |
 | Inspect/install external tools | `:Mason` |
 | Check formatter for current buffer | `:ConformInfo` |
 | Inspect current filetype | `:set filetype?` |
@@ -735,6 +760,7 @@ Configuration ownership:
 | --- | --- |
 | Defaults and indentation | `lua/config/options.lua` |
 | General mappings | `lua/config/keymaps.lua` |
+| Platform/build capabilities | `lua/config/platform.lua` |
 | Navigation/search | `lua/plugins/navigation.lua` |
 | Git | `lua/plugins/git.lua` |
 | Copilot completion backend | `lua/plugins/copilot.lua` |
@@ -746,6 +772,12 @@ Configuration ownership:
 | Debugging | `lua/plugins/debugging.lua` |
 | Testing/tasks | `lua/plugins/testing.lua` |
 | Sessions | `lua/plugins/sessions.lua` |
+
+The same tracked Lua files work on native Windows, macOS, Linux, and WSL, but
+generated plugins, parsers, Mason tools, and authentication state are local to
+each operating system. Follow [WINDOWS.md](WINDOWS.md) before the first native
+Windows launch; it also covers PowerShell, clipboard, Yazi, Copilot, CMake, and
+the BCORNE Ctrl-versus-GUI modifier caveat.
 
 ## Habit-building plan
 

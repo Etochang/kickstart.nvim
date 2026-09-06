@@ -4,13 +4,14 @@
 -- ============================================================
 
 local gh = require('config.pack').gh
+local platform = require 'config.platform'
 
 local telescope_plugins = {
   gh 'nvim-lua/plenary.nvim',
   gh 'nvim-telescope/telescope.nvim',
   gh 'nvim-telescope/telescope-ui-select.nvim',
 }
-if vim.fn.executable 'make' == 1 then telescope_plugins[#telescope_plugins + 1] = gh 'nvim-telescope/telescope-fzf-native.nvim' end
+if platform.fzf_build_commands() then telescope_plugins[#telescope_plugins + 1] = gh 'nvim-telescope/telescope-fzf-native.nvim' end
 
 vim.pack.add(telescope_plugins)
 vim.pack.add {
@@ -87,13 +88,29 @@ vim.keymap.set({ 'n', 'x', 'o' }, 'S', function() require('flash').treesitter() 
 vim.keymap.set('c', '<C-s>', function() require('flash').toggle() end, { desc = 'Toggle Flash search' })
 
 -- Yazi remains the full external file manager. It is intentionally preferred
--- over adding a second sidebar-style file tree.
-require('yazi').setup { open_for_directories = true }
+-- over adding a second sidebar-style file tree. A fresh machine without the
+-- optional executable keeps netrw as a functional directory-browser fallback.
+local has_yazi = vim.fn.executable 'yazi' == 1 and vim.fn.executable 'ya' == 1
+require('yazi').setup {
+  open_for_directories = has_yazi,
+  integrations = {
+    -- Avoid Yazi's GNU realpath dependency, which is not included with Windows.
+    -- vim.fs also keeps drive-letter and separator handling inside Neovim.
+    resolve_relative_path_implementation = function(args) return platform.relative_path(args.source_dir, args.selected_file) end,
+  },
+}
 -- Yazi silently clears netrw's optional FileExplorer autocommand. When netrw
--- has not created it, Vim records the suppressed error in v:errmsg; clear that
--- harmless residue so later startup diagnostics only report real failures.
-vim.v.errmsg = ''
-vim.keymap.set('n', '<leader>-', '<cmd>Yazi<CR>', { desc = 'Open Yazi' })
+-- has not created it, Vim records the suppressed error in v:errmsg. Clear only
+-- that exact residue so an unrelated earlier startup error remains visible.
+if vim.v.errmsg:match '^E216:.*FileExplorer' then vim.v.errmsg = '' end
+vim.keymap.set('n', '<leader>-', function()
+  if has_yazi then
+    vim.cmd.Yazi()
+  else
+    vim.notify('Yazi and ya are not both on PATH; opening netrw instead', vim.log.levels.INFO)
+    vim.cmd.Explore()
+  end
+end, { desc = 'Open directory browser' })
 
 -- Trouble presents diagnostics, symbols, references, and list entries as
 -- structured, previewable trees instead of transient one-line messages.

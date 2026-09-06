@@ -68,8 +68,13 @@ local servers = {
       client.server_capabilities.documentFormattingProvider = false
 
       if client.workspace_folders then
-        local path = client.workspace_folders[1].name
-        if path ~= vim.fn.stdpath 'config' and (vim.uv.fs_stat(path .. '/.luarc.json') or vim.uv.fs_stat(path .. '/.luarc.jsonc')) then return end
+        local workspace = client.workspace_folders[1].name
+        local path = vim.fs.normalize(vim.uv.fs_realpath(workspace) or workspace)
+        local config_root = vim.fn.stdpath 'config'
+        config_root = vim.fs.normalize(vim.uv.fs_realpath(config_root) or config_root)
+        local luarc = vim.fs.joinpath(path, '.luarc.json')
+        local luarc_jsonc = vim.fs.joinpath(path, '.luarc.jsonc')
+        if path ~= config_root and (vim.uv.fs_stat(luarc) or vim.uv.fs_stat(luarc_jsonc)) then return end
       end
 
       local current_settings = client.config.settings --[[@as lspconfig.settings.lua_ls]]

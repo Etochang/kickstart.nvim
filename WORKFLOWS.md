@@ -40,9 +40,11 @@ Then repeat this loop:
 Use AI only at the level the task needs:
 
 - Completion for finishing the line already in your head.
-- Inline edit for one selected region.
-- Chat for explanations, design discussion, and diagnosis.
-- Copilot CLI agent for repository-aware, multi-file implementation.
+- A CLI conversation in another terminal pane for explanations and diagnosis.
+- A scoped CLI-agent task for implementation, followed by local diff review.
+
+For a persistent editor/agent workspace, start with the
+[tmux setup](#terminal-agents-and-copilot-workflows).
 
 ## Files, directories, buffers, and windows
 
@@ -203,8 +205,8 @@ Diagnostics and symbol views:
 | Quickfix list | `<Leader>xQ` |
 
 `<Leader>cs` is a navigable outline of functions, methods, classes, and other
-symbols in the current file. It does not send symbols to CodeCompanion; use
-CodeCompanion's `/symbols` command for that.
+symbols in the current file. It is an editor view, not context automatically
+shared with an external agent.
 
 `grd` answers “where is this symbol defined?” and jumps there through a
 Telescope result when needed. `grr` answers “where is this symbol used?” and
@@ -272,10 +274,10 @@ UseTab: Never
 AllowShortFunctionsOnASingleLine: None
 ```
 
-### Markdown and AI-output rendering
+### Markdown rendering
 
-Markdown files and CodeCompanion chats render headings, lists, tables, links,
-and code blocks directly inside Neovim. Normal mode shows the rendered view;
+Markdown files render headings, lists, tables, links, and code blocks directly
+inside Neovim. Normal mode shows the rendered view;
 enter Insert mode when you need the underlying Markdown source.
 
 | Action | Key/command |
@@ -551,122 +553,154 @@ different adapter. An embedded target additionally needs its cross-debugger,
 probe/server such as OpenOCD or J-Link, and target-specific DAP launch/attach
 configuration.
 
-## CodeCompanion and Copilot workflows
+## Terminal agents and Copilot workflows
 
-### Choose the right interaction
+### Why the split
 
-| Need | Start with | Behavior |
-| --- | --- | --- |
-| Quick suggestion | Blink completion | No chat or file edits |
-| Explain or discuss code | `<Leader>an` | New regular Copilot chat |
-| Reopen/hide current chat | `<Leader>ac` | Toggles regular chat window |
-| Discover built-in prompts | `<Leader>aa` | Action palette |
-| Edit selection | Select, then `<Leader>ai` | Accept/reject inline diff |
-| Discuss selected code | Select, then `<Leader>as` | Add to current chat |
-| Multi-file autonomous task | `<Leader>aA` | Copilot CLI through ACP |
-| Review files touched by AI | `<Leader>ar` | Opens changed files in quickfix |
+Neovim owns editing, completion, diagnostics, tests, and Git review. The CLI
+owns conversations, authentication, model selection, context management, and
+tool approvals. tmux owns pane layout and keeping processes alive while you
+detach. The only tmux plugin is an optional command menu; no provider adapters
+or tmux plugin manager are required.
 
-### Regular chat
+The tradeoff is deliberate: agents see saved files, not Neovim's live buffers,
+selections, or diagnostics. Copy references explicitly and save before asking
+an agent to inspect or edit your work. Inline Copilot completion still works
+through Blink and retains its separate `:Copilot auth` login.
 
-Use regular chat for reasoning, questions, reviews, and tightly scoped changes.
-Inside a chat buffer:
+### Start a project workspace
 
-| Action | Key |
+Install tmux with `brew install tmux` on macOS, or your distribution's package
+manager on Linux/WSL. Install and authenticate only the agent CLIs you use.
+Native Windows can use Windows Terminal panes without tmux.
+
+From a terminal outside tmux:
+
+```sh
+cd /path/to/project
+tmux -L ide -f ~/.config/nvim/tmux.conf new-session -A -s project -c "$PWD" 'nvim .'
+```
+
+Use the actual config path if this repository lives elsewhere. Use one session
+name per project, such as `api` or `frontend`: `-A` reattaches to an existing
+session with that name; it does not change that session's working directory.
+`-L ide` uses a dedicated server, leaving any existing default tmux server and
+personal configuration untouched.
+
+Press `Ctrl-b`, release it, then press `a`. In the new right-hand shell, run
+your chosen agent, for example:
+
+```sh
+copilot
+```
+
+Or run `codex`, `gemini`, or another provider's documented interactive CLI.
+There is no Neovim configuration to change when switching providers. For
+Antigravity, confirm that the installed command starts a terminal agent rather
+than only launching its editor; an editor-launcher command is not a CLI chat.
+Use each CLI's own help for login, models, reasoning, usage, and session resume.
+
+### Pane and session controls
+
+All tmux keys below mean `Ctrl-b`, release, then the listed key. Neovim's
+`Ctrl-h/j/k/l` mappings still navigate Neovim splits; tmux panes are separate.
+
+| Action | tmux key |
 | --- | --- |
-| Show all chat mappings | `?` |
-| Send from Normal mode | `<CR>` or `<C-s>` |
-| Send from Insert mode | `<C-s>` |
-| Stop the current response | `q` |
-| Close chat | `<C-c>` |
-| Regenerate last response | `gr` |
-| Change adapter/model | `ga` |
-| Inspect messages, adapter settings, and context | `gd` |
-| Show Copilot usage statistics | `gS` |
-| Add a message while tools are running | `gm` |
-| Sync all of a pinned buffer each turn | `gba` |
-| Sync only a pinned buffer's diff | `gbd` |
-| Reset this chat's cached tool approvals | `gtx` |
-| Yank the last code block | `gy` |
-| Fold chat code blocks | `gf` |
-| Next/previous response header | `]]` / `[[` |
-| Next/previous chat | `}` / `{` |
-| Clear chat | `gx` |
+| Open command menus (when tmux-menus is installed) | `Enter` |
+| Show built-in keyboard help / leave help | `?` / `q` |
+| Open a right-hand agent shell in the current pane's directory | `a` |
+| Move to another pane | Arrow key or `o` |
+| Toggle current pane full-screen | `z` |
+| Open another window in the current directory | `c` |
+| Choose a window/session | `w` |
+| Split side by side / above and below | `%` / `"` |
+| Resize a pane | Hold `Alt` and press an arrow after the prefix |
+| Close the current pane, with confirmation | `x` |
+| Scroll history / leave copy mode | `[` / `q` |
+| Select / copy in copy mode | `v` / `y` |
+| Paste tmux's copied text | `]` |
+| Detach without stopping Neovim or the agent | `d` |
 
-The meanings of `ga`, `gS`, and similar mappings above are buffer-local to a
-CodeCompanion chat. Outside chat, the normal editing mappings still apply.
+Mouse selection and pane resizing are enabled. Paste file references into the
+CLI with your terminal's normal clipboard paste, such as `Cmd-v` on macOS;
+tmux's `]` pastes its own copy buffer, not necessarily the system clipboard.
+On narrow displays, zoom with `z` or use separate windows instead of shrinking
+both tools. `a` creates a new shell each time; use pane navigation to return to
+an existing agent.
 
-### Give regular chat explicit context
+Reconnect or inspect sessions from another terminal:
 
-Type `#` in a chat for editor-context completion, `/` for a context command,
-and `@` for HTTP tools or tool groups.
-
-Useful context references:
-
-```text
-#{buffer}       Current/most recent code buffer; diff-synced by default
-#{buffer}{all}  Keep sharing the complete current buffer
-#{buffers}      All currently open normal buffers
-#{selection}    Most recent visual selection
-#{diagnostics}  Current buffer's LSP diagnostics
-#{diff}         Staged and unstaged Git diff
-#{quickfix}     Current quickfix contents
-#{terminal}     Recent output from the latest terminal
-#{viewport}     Code currently visible on screen
+```sh
+tmux -L ide attach-session -t project
+tmux -L ide list-sessions
 ```
 
-Useful slash commands:
+Closing a terminal after detaching does not stop these processes. A reboot or
+tmux server exit does: use Neovim's session restore and the CLI's own resume
+feature afterward. No process/session resurrection plugin is installed.
 
-```text
-/file      Select one or several files from the working directory
-/buffer    Select one or several already-open buffers
-/symbols   Add a compact Tree-sitter outline instead of a full file
-/compact   Replace old conversation turns with a summary
-/resume    Resume a supported ACP session; use in a fresh chat
-/mode      Change a mode advertised by an ACP agent
-/acp_session_options  Change advertised ACP model/reasoning options
+tmux reads `-f` only when its server starts. After editing the supplied config,
+reload it explicitly into the `ide` server:
+
+```sh
+tmux -L ide source-file ~/.config/nvim/tmux.conf
 ```
 
-In the Telescope `/file` picker, `<CR>` chooses one file and `<Tab>` marks
-multiple files. You do not need to open files as buffers before `/file` can add
-them. `#{buffers}`, by definition, only includes buffers that are already open.
+### Command menus
 
-Do not manually type XML-like text such as `<file>path</file>` and expect it to
-load a file. Use `/file`, `#{buffer:path}`, or an agent with filesystem tools.
+[tmux-menus](https://github.com/jaclu/tmux-menus) provides named actions for
+panes, windows, sessions, splits, and resizing. Open it with `Ctrl-b`, release,
+then `Enter`. Choose entries with Up/Down and Enter, or their displayed keys;
+Escape dismisses the menu. Inside a menu, `!` cycles between action labels,
+underlying commands, and matching keyboard shortcuts.
 
-The regular Copilot adapter can also become a CodeCompanion tool-agent when the
-model supports tool calling:
+On tmux 3.7c, Left Arrow does not reliably go back: select the Back entry and
+press Enter instead. Menus that exceed terminal height may not appear; enlarge
+the Ghostty window or reduce its font size. For mouse resizing, drag the pane
+border. Closing a pane stops its programs; detach with `Ctrl-b d` to keep them.
 
-```text
-@{agent} Inspect this repository and explain its configuration structure.
-Cite the relevant paths.
+The local installation is pinned to release `v2.4.1`, without TPM. Install the
+same release on a new macOS/Linux/WSL machine with:
+
+```sh
+git clone --depth 1 --branch v2.4.1 https://github.com/jaclu/tmux-menus.git "$HOME/.local/share/tmux/plugins/tmux-menus"
+tmux -L ide source-file ~/.config/nvim/tmux.conf
 ```
 
-`@{agent}` provides file search, grep, file reading/editing, diagnostics, and
-command tools rooted at Neovim's current working directory. Check `:pwd` if it
-cannot find files. This tool group belongs to regular HTTP chat; it is not needed
-inside the Copilot CLI ACP chat, which already has its own agent tools.
+Run the reload command only when the `ide` server is running; otherwise start
+it normally. Menu initialization happens in the background and can take a
+moment after reload. The config skips the plugin when it is absent. To update,
+review a newer release and explicitly check out its tag in the plugin clone;
+there are no automatic updates. No navigation or session-restore plugins are
+installed.
 
-### Inline edits
+### Share context and receive edits
 
-1. Select the smallest useful region in Visual mode.
-2. Press `<Leader>ai`.
-3. Describe the transformation.
-4. Inspect the resulting diff.
-5. Press `gda` to accept or `gdr` to reject it.
-6. Format and test afterward.
+| Need | Neovim key | Behavior |
+| --- | --- | --- |
+| Quick suggestion | Blink completion | Accept explicitly with `<C-y>` |
+| Reference current file | `<Leader>ac` | Copy path relative to Neovim's working directory |
+| Reference a region | Visually select, then `<Leader>ac` | Copy `path:start-end` |
+| Review repository changes | `<Leader>ar` or `<Leader>gd` | Open Diffview |
 
-Use inline edit for one coherent region. Switch to the ACP agent when a change
-requires discovering or coordinating several files.
+References are plain text, not an automatic file upload or provider-specific
+attachment. Paste one into a prompt such as `Explain src/parser.lua:20-45`.
+Visual references describe the selected line range, not only selected columns.
+Keep Neovim's `:pwd` and the CLI's working directory at the same project root.
+The shortcut warns about unsaved changes but does not save or send anything.
 
-### Copilot CLI ACP agent
+Use `:write` for the current file or `:wall` to save all intended edits before
+delegating. Neovim checks for disk changes on focus return, buffer entry, normal
+mode idle, and leaving an embedded terminal. Unmodified buffers reload;
+modified buffers retain your text and Neovim reports the conflict. Resolve it
+before writing, rather than using `:write!` to overwrite the agent's work.
+`:checktime` is the manual fallback. Avoid editing the same file while an agent
+is working on it.
 
-Start Neovim at the repository root, verify it with `:pwd`, then press
-`<Leader>aA`. Unlike regular chat, this starts the installed `copilot` CLI as a
-stateful Agent Client Protocol session. It can discover files without opening
-them as buffers, read and edit the repository, and request commands through its
-own approval system.
+### Delegate and review
 
-A strong initial prompt contains four parts:
+A useful initial prompt contains four parts:
 
 ```text
 Goal: Implement <specific outcome>.
@@ -678,40 +712,24 @@ First inspect the repository and relevant existing patterns before editing.
 
 Use this agent loop:
 
-1. Ask for a concrete outcome, constraints, and verification—not vague
-   “improvements.”
-2. Read tool approvals before accepting them. Prefer one-time approval when
+1. Save your edits and inspect `git status` so you know what was already changed.
+2. Ask for a concrete outcome, constraints, and verification.
+3. Read tool approvals before accepting them. Prefer one-time approval when
    learning a workflow.
-3. Interrupt with `q` if it is heading in the wrong direction.
-4. Ask it to run focused tests, then the relevant broader suite.
-5. Press `<Leader>ar` to inspect every file CodeCompanion tracked as changed.
-6. Press `<Leader>gd` for the authoritative Git diff.
-7. Run formatting, build, and tests yourself.
-8. Commit through Neogit only after the diff and tests are satisfactory.
+4. Use the CLI's documented interrupt key if it heads in the wrong direction.
+5. Ask it to run focused tests, then the relevant broader suite.
+6. Return to Neovim and press `<Leader>ar` to review the repository diff.
+7. Independently verify formatting, build, and tests before committing in Neogit.
 
-Avoid approval-bypass or “YOLO” modes while learning. Agent access does not
+Avoid approval-bypass modes while learning. Agent access does not
 replace Git review, tests, or understanding what will be committed.
+Start with one agent per checkout. Use separate Git worktrees and tmux sessions
+for concurrent tasks so agents do not race over the same files or Git index.
 
-### Model, reasoning, and context information
-
-Inside chat:
-
-- `ga` shows the selectable adapter and models exposed to CodeCompanion.
-- `/acp_session_options` shows model/reasoning options advertised by an ACP
-  agent, when supported.
-- `gd` opens the exact chat debug data: adapter, schema/settings, message
-  history, and attached context.
-- `gS` shows Copilot usage statistics.
-
-The provider may not expose a trustworthy maximum context-window size or every
-server-side routing decision. If it is absent from `gd` and the ACP session
-options, treat it as provider-managed rather than inferring a number.
-
-### Review AI changes
-
-`<Leader>ar` runs `:CodeCompanionChat Changes`, collecting files touched by
-CodeCompanion into quickfix. Navigate them with `]q` and `[q`. This is a useful
-first pass, but it is session tracking rather than Git's final truth.
+Diffview is repository-wide, not a record of which changes an agent authored.
+It includes your earlier edits too. Use `:DiffviewRefresh` if an already-open
+view is stale and `:DiffviewClose` when finished. Check `git status` for new or
+ignored files that may not appear in a normal diff.
 
 Always finish with:
 
@@ -721,6 +739,18 @@ Always finish with:
 <Leader>tn   Run a focused test
 <Leader>gg   Stage only intended changes, commit, and push
 ```
+
+### Migrating from CodeCompanion
+
+Restart Neovim to unload the old plugin and mappings. `<Leader>ac` now copies
+context instead of toggling chat, and `<Leader>ar` opens Diffview instead of
+conversation quickfix. The old `<Leader>aa`, `<Leader>an`, `<Leader>ai`,
+`<Leader>as`, and `<Leader>aA` mappings are removed.
+
+The plugin is no longer declared or pinned. To reclaim its installed checkout
+after restarting, run `:lua vim.pack.del({ 'codecompanion.nvim' })` if it is
+still installed. CLI authentication and existing chat data are not migrated or
+deleted by this configuration change.
 
 ## Sessions
 
@@ -767,8 +797,9 @@ Configuration ownership:
 | Completion/snippets | `lua/plugins/completion.lua` |
 | LSP and Mason tools | `lua/plugins/lsp.lua` |
 | Formatting and linting | `lua/plugins/formatting.lua` |
-| Markdown and AI rendering | `lua/plugins/markdown.lua` |
-| CodeCompanion/ACP | `lua/plugins/ai.lua` |
+| Markdown rendering | `lua/plugins/markdown.lua` |
+| CLI context and review shortcuts | `lua/plugins/ai.lua` |
+| Terminal panes and session controls | `tmux.conf` |
 | Debugging | `lua/plugins/debugging.lua` |
 | Testing/tasks | `lua/plugins/testing.lua` |
 | Sessions | `lua/plugins/sessions.lua` |
@@ -828,10 +859,10 @@ Practice one interaction at a time:
 
 ```text
 <C-y>            accept a completion
-<Leader>an       ask/discuss in regular chat
-<Leader>ai       transform a visual selection
-<Leader>aA       delegate a scoped multi-file task
-<Leader>ar       inspect AI-touched files
+<Leader>ac       copy a file or selected-line reference
+Ctrl-b a         open an agent shell (tmux, not Neovim)
+Ctrl-b o         switch between editor and agent panes
+<Leader>ar       review repository changes
 ```
 
 End every AI task with the same non-AI review, build, test, and Git loop. That

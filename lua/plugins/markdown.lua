@@ -1,6 +1,6 @@
 -- ============================================================
 -- MARKDOWN RENDERING
--- In-buffer presentation and side-by-side preview for docs and AI chats
+-- In-buffer presentation and side-by-side preview for docs
 -- ============================================================
 
 local gh = require('config.pack').gh
@@ -9,11 +9,11 @@ local gh = require('config.pack').gh
 -- code-block icons; both are initialized before this module in init.lua.
 vim.pack.add { gh 'MeanderingProgrammer/render-markdown.nvim' }
 
--- Render ordinary Markdown and CodeCompanion's Markdown-backed chat buffers.
+-- Render ordinary Markdown buffers.
 -- Normal mode presents the document while Insert mode exposes its source, so
 -- reading and editing do not require separate buffers.
 require('render-markdown').setup {
-  file_types = { 'markdown', 'codecompanion' },
+  file_types = { 'markdown' },
 }
 
 -- The side preview most closely matches VS Code's rendered Markdown pane. The

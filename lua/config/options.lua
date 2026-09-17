@@ -29,6 +29,7 @@ vim.schedule(function() vim.o.clipboard = 'unnamedplus' end)
 
 vim.o.breakindent = true
 vim.o.undofile = true -- Persist undo history between editing sessions.
+vim.o.autoread = true
 
 -- Ignore case unless the search contains an uppercase character or `\C`.
 vim.o.ignorecase = true

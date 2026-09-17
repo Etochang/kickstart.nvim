@@ -68,18 +68,6 @@ local function check_tree_sitter()
   end
 end
 
----@return boolean
-local function copilot_uses_token_database()
-  local config_root = os.getenv 'CODECOMPANION_TOKEN_PATH'
-  if not config_root or config_root == '' then
-    config_root = platform.is_windows and vim.fn.expand '~/AppData/Local' or (os.getenv 'XDG_CONFIG_HOME' or vim.fn.expand '~/.config')
-  end
-
-  local auth_root = vim.fs.joinpath(config_root, 'github-copilot')
-  local has_json_token = vim.uv.fs_stat(vim.fs.joinpath(auth_root, 'hosts.json')) or vim.uv.fs_stat(vim.fs.joinpath(auth_root, 'apps.json'))
-  return not has_json_token and vim.uv.fs_stat(vim.fs.joinpath(auth_root, 'auth.db')) ~= nil
-end
-
 local function check_gnu_tar()
   local executable = platform.first_executable { 'gtar', 'tar' }
   if not executable then return end
@@ -125,8 +113,14 @@ local function check_external_reqs()
   check_any('Python tests and tools', platform.is_windows and { 'py', 'python' } or { 'python3', 'python' }, true)
   check_node()
   check_any('Node package manager for Mason tools', { 'npm' })
-  check_any('CodeCompanion Copilot token database reader', { 'sqlite3' }, not copilot_uses_token_database())
-  check_any('Copilot CLI ACP agent', { 'copilot' }, true)
+
+  vim.health.start 'External AI workspace'
+  if platform.is_windows then
+    vim.health.info 'Use Windows Terminal panes on native Windows, or run tmux and Neovim together inside WSL'
+  else
+    check_any('Terminal multiplexer', { 'tmux' }, true)
+  end
+  check_any('AI CLI (any provider; launch in a separate pane)', { 'copilot', 'codex', 'gemini' }, true)
 
   local yazi = platform.first_executable { 'yazi' }
   local ya = platform.first_executable { 'ya' }

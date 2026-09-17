@@ -45,7 +45,6 @@ Install the feature-specific tools for the workflows you intend to use:
 winget install --id sharkdp.fd -e --source winget
 winget install --id Kitware.CMake -e --source winget
 winget install --id Ninja-build.Ninja -e --source winget
-winget install --id SQLite.SQLite -e --source winget
 winget install --id GitHub.Copilot -e --source winget
 winget install --id sxyazi.yazi -e --source winget
 ```
@@ -73,7 +72,6 @@ pwsh --version
 copilot --version
 yazi --version
 ya --version
-sqlite3 --version
 tree-sitter --version
 ```
 
@@ -154,7 +152,6 @@ configured language/debug/formatting tools. Let those jobs finish, then run:
 :checkhealth vim.provider
 :checkhealth telescope
 :checkhealth yazi
-:checkhealth codecompanion
 :checkhealth copilot
 ```
 
@@ -164,21 +161,30 @@ even if you copied the configuration from a Mac.
 
 ## 3. Authenticate Copilot
 
-There are two related integrations:
+There are two independent integrations:
 
-1. `copilot.lua` supplies Blink completions and the regular CodeCompanion HTTP
-   chat. In Neovim, run `:Copilot auth` and then `:Copilot auth info`.
-2. GitHub Copilot CLI supplies the repository-aware ACP agent started with
-   `<Leader>aA`. In PowerShell, run `copilot`, enter `/login`, and complete the
-   device flow.
+1. `copilot.lua` supplies Blink completions. In Neovim, run `:Copilot auth`
+  and then `:Copilot auth info`.
+2. GitHub Copilot CLI runs directly in another Windows Terminal pane. Open
+  PowerShell in the same project directory, run `copilot`, enter `/login`,
+  and complete the device flow.
 
-The logins may be stored separately, so authenticate both. CodeCompanion can
-read Copilot's newer `auth.db` token store through `sqlite3.exe`; that is why
-SQLite is in the install list. GitHub's native WinGet Copilot package is
-preferred here because it exposes a directly executable `copilot` program.
+The logins may be stored separately, so authenticate both. No editor-side
+adapter or SQLite token reader is needed. GitHub's native WinGet Copilot package
+is preferred here because it exposes a directly executable `copilot` program.
 See GitHub's
 [Copilot CLI installation guide](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli)
 for alternative installation and authentication methods.
+
+Use `<Leader>ac` in Neovim to copy a file or selected-line reference and paste
+it into the CLI. Save first: agents read files on disk, not unsaved buffers.
+`<Leader>ar` opens Diffview for Git review.
+
+tmux is not a native Windows dependency. For the supplied tmux configuration,
+run both Neovim and the CLI inside WSL and follow the
+[terminal-agent guide](WORKFLOWS.md#terminal-agents-and-copilot-workflows).
+Do not mix a Windows Neovim process with a WSL agent working on a different
+checkout or using different paths.
 
 If Copilot is supplied by an organization or enterprise, its administrator
 must also enable the Copilot CLI policy. A personal subscription alone is not

@@ -27,6 +27,7 @@ lua/config/pack.lua      vim.pack helpers and build hooks
 lua/config/platform.lua  OS capabilities and native build selection
 lua/plugins/*.lua        UI, navigation, Git, LSP, formatting, and tools
 lua/custom/plugins/      Personal extensions loaded automatically
+tmux.conf                Terminal workspace and optional command menus
 ```
 
 The files retain descriptive comments so the configuration remains useful as
@@ -63,7 +64,9 @@ Workflow-specific requirements:
 * CMake/Make for Telescope's optional native sorter; Telescope falls back safely
   when neither exists
 * Python/pytest for Python testing, and CMake/Ninja/GoogleTest for C/C++ testing
-* `copilot`, `yazi`/`ya`, and `sqlite3` for the corresponding optional workflows
+* `tmux` on macOS/Linux/WSL and an agent CLI such as `copilot`, `codex`, or
+  `gemini` for the optional terminal-agent workflow
+* `yazi`/`ya` for the optional directory browser
 
 Language-specific servers, debuggers, linters, and formatters are installed
 through Mason when available. Other SDKs (`go`, Rust, an embedded cross-
@@ -75,6 +78,27 @@ toolchain, and so on) remain project dependencies.
 > [!NOTE]
 > See [Windows setup](WINDOWS.md) or the
 > [install recipes](#install-recipes) for platform-specific notes.
+
+### Terminal agent workspace
+
+Agent conversations run in a separate terminal pane, not an editor plugin.
+Copilot completion remains in Neovim's Blink menu. On macOS, install tmux with
+`brew install tmux`, then run this from a project directory:
+
+```sh
+tmux -L ide -f ~/.config/nvim/tmux.conf new-session -A -s project -c "$PWD" 'nvim .'
+```
+
+Press `Ctrl-b`, then `a` to open a right-hand shell pane and run `copilot`
+(or your preferred CLI). Choose a different session name for each project.
+The dedicated `ide` server leaves your default tmux server/configuration alone.
+Use the actual config path if it is not installed at `~/.config/nvim`.
+With the optional `tmux-menus` plugin installed, `Ctrl-b`, then `Enter` opens
+command menus for pane navigation, splits, resizing, and session management.
+See [menu setup](WORKFLOWS.md#command-menus) for installation on another machine.
+See [the terminal-agent workflow](WORKFLOWS.md#terminal-agents-and-copilot-workflows)
+for pane controls, context sharing, review, and migration notes. On native
+Windows, use Windows Terminal panes; tmux belongs inside WSL.
 
 ### Install Kickstart
 

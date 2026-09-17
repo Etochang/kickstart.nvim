@@ -1,69 +1,34 @@
 -- ============================================================
 -- AI ASSISTANCE
--- CodeCompanion chat, inline transformations, and Copilot CLI agent
+-- File references for external CLI agents and local diff review
 -- ============================================================
 
-local gh = require('config.pack').gh
-
--- CodeCompanion changes quickly, so remain within the current major release.
--- Plenary, Tree-sitter, Telescope, Blink, and copilot.lua are loaded by earlier
--- modules and provide the integrations CodeCompanion uses here.
-vim.pack.add {
-  {
-    src = gh 'olimorris/codecompanion.nvim',
-    version = vim.version.range '19.*',
-  },
-}
-
-require('codecompanion').setup {
-  interactions = {
-    -- Ordinary chat and inline requests reuse the existing copilot.lua login.
-    -- The more powerful CLI agent is started only by the explicit mapping below.
-    chat = { adapter = 'copilot' },
-    inline = { adapter = 'copilot' },
-    cmd = { adapter = 'copilot' },
-  },
-  display = {
-    action_palette = { provider = 'telescope' },
-  },
-}
-
--- The action palette is the discovery surface for built-in prompts such as
--- explain, fix, tests, diagnostics, and commit-message generation.
-vim.keymap.set({ 'n', 'v' }, '<leader>aa', '<cmd>CodeCompanionActions<CR>', {
-  desc = '[A]I [A]ctions',
-})
-
--- Regular Copilot chat is intentionally separate from the ACP agent. It is a
--- good fit for questions and constrained advice that should not modify a project.
-vim.keymap.set({ 'n', 'v' }, '<leader>ac', '<cmd>CodeCompanionChat Toggle<CR>', {
-  desc = '[A]I toggle [C]hat',
-})
-vim.keymap.set({ 'n', 'v' }, '<leader>an', '<cmd>CodeCompanionChat<CR>', {
-  desc = '[A]I [N]ew chat',
-})
-
--- Inline requests operate on a visual selection and present an editable diff.
--- A selection can instead be attached to the current chat for a longer exchange.
-vim.keymap.set('v', '<leader>ai', '<cmd>CodeCompanion<CR>', {
-  desc = '[A]I [I]nline edit',
-})
-vim.keymap.set('v', '<leader>as', '<cmd>CodeCompanionChat Add<CR>', {
-  desc = '[A]I add [S]election to chat',
-})
-
--- Start GitHub Copilot CLI through its Agent Client Protocol server. This mode
--- may read/write files and request commands, subject to Copilot's approvals.
-vim.keymap.set('n', '<leader>aA', function()
-  if vim.fn.executable 'copilot' ~= 1 then
-    vim.notify('Copilot CLI is not installed or not on PATH', vim.log.levels.WARN)
+local function copy_reference(with_range)
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == '' or vim.bo.buftype ~= '' then
+    vim.notify('Open a file before copying an agent reference', vim.log.levels.WARN)
     return
   end
-  vim.cmd 'CodeCompanionChat adapter=copilot_acp'
-end, { desc = '[A]I Copilot [A]gent' })
 
--- Collect the files changed by the current conversation into the quickfix list
--- for a first review; Diffview remains the final repository-wide review tool.
-vim.keymap.set('n', '<leader>ar', '<cmd>CodeCompanionChat Changes<CR>', {
+  local reference = require('config.platform').relative_path(vim.fn.getcwd(), path)
+  if with_range then
+    local anchor, cursor = vim.fn.line 'v', vim.fn.line '.'
+    reference = ('%s:%d-%d'):format(reference, math.min(anchor, cursor), math.max(anchor, cursor))
+  end
+
+  vim.fn.setreg('+', reference)
+  local message = 'Copied: ' .. reference
+  if vim.bo.modified then message = message .. ' (unsaved changes are not visible to the CLI; use :write first)' end
+  vim.notify(message)
+end
+
+vim.keymap.set('n', '<leader>ac', function() copy_reference(false) end, {
+  desc = '[A]I [C]opy file reference',
+})
+vim.keymap.set('x', '<leader>ac', function() copy_reference(true) end, {
+  desc = '[A]I [C]opy selection reference',
+})
+
+vim.keymap.set('n', '<leader>ar', '<cmd>DiffviewOpen<CR>', {
   desc = '[A]I [R]eview changed files',
 })

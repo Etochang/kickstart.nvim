@@ -1,5 +1,202 @@
-// Movement Practice: a deliberately varied TypeScript program
-// Use this file to practice words, lines, paragraphs, brackets, searches, and jumps.
+// =============================================================================
+//  MOVEMENT PRACTICE ARENA (CORNE KEYBOARD & NEOVIM DRILLS)
+//  Dual-purpose practice buffer:
+//    • PART 1: The Movement Dojo (targeted stations for symbols, layers & plugins)
+//    • PART 2: Real-World Application Code (free-roam navigation & search)
+// =============================================================================
+//
+// QUICK GUIDE FOR CORNE USERS (36/42-key split layouts):
+// • Number row & counts (3w, 5j, 42G, 2ciw)      -> Lower/Raise layer
+// • Symbol layer ({}, [], (), <>, $, ^, %, *, #) -> Symbol/Nav layer
+// • Quotes & delims ("" '' `` ; : , . / ? | \ ~) -> Symbol layer + home-row mods
+// • Diagnostics (<F8>, <S-F8>, ]d, [d)           -> Layer-2 encoder / keymaps
+// • Mini.nvim superpowers:
+//     - mini.surround:   saiw", sd', sr)"
+//     - mini.splitjoin:  gS (toggle single-line <-> multi-line)
+//     - mini.align:      ga=, ga:, gA (live interactive preview)
+//     - mini.move:       <M-j>, <M-k>, <M-h>, <M-l>
+// • Navigation & Treesitter:
+//     - Flash:           s (labeled jump), S (Treesitter node jump)
+//     - Text objects:    af/if (function), ac/ic (class), aa/ii (next object)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// PART 1: THE MOVEMENT DOJO (TARGETED DRILLS)
+// -----------------------------------------------------------------------------
+
+// === STATION 1: INLINE CHARACTER HUNTING (f, F, t, T, ;, ,) ==================
+// Goal: Jump to characters on the line and cycle through occurrences with ';' and ','
+// 1. On line A below, start at column 0. Type 'f/' to hit the first slash.
+//    Press ';' repeatedly to jump to every subsequent slash; press ',' to cycle back.
+// 2. On line B, use 't_' to land right before each underscore.
+// 3. On line C, move to the end ($), then use 'F:' or 'T@' to leap backward.
+const PATH_DRILL_A = "/usr/local/var/log/nginx/access.corne-practice.2026.log";
+const IDENT_DRILL_B = "sys_user_session_token_validation_worker_pool_id";
+const URL_DRILL_C = "postgresql://db_admin:Secr3t_P@ssw0rd!@10.0.4.128:5432/primary_task_db";
+
+// === STATION 2: WORD VS. WORD NAVIGATION (w, e, b, ge vs W, E, B, gE) =========
+// Goal: Master the difference between punctuation-sensitive (w/b) and whitespace (W/B).
+// 1. Start at 'const' on line A. Count how many 'w' presses it takes to reach 'toLowerCase'.
+// 2. Return to 'const' (press '0'). Now press 'W' and 'E'.
+//    Notice how 'W' leaps across entire dotted and bracketed tokens in 1-2 keypresses!
+// 3. Test backward leaps: 'B' vs 'b', and end-of-word backwards 'gE' vs 'ge'.
+const tokenLookup = ctx.req.headers["x-corne-auth_token"]?.split("-")[2]?.toLowerCase();
+const regexFilter = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/i;
+
+// === STATION 3: CORNE SYMBOL LAYERS & TEXT OBJECTS ============================
+// Goal: Build instantaneous muscle memory for your Corne keyboard's symbol layer.
+//
+// Drill 3.1: Quotes (ci", ca", ci', ca', ci`, ca`)
+// • Place cursor inside "REPLACE_ME_DOUBLE" -> type: ci"NEW_VALUE<Esc>
+// • Place cursor inside 'REPLACE_ME_SINGLE' -> type: ci'NEW_VALUE<Esc>
+// • Place cursor inside `REPLACE_ME_BACKTICK` -> type: ci`NEW_VALUE<Esc>
+const quotePractice = {
+  double: "REPLACE_ME_DOUBLE",
+  single: 'REPLACE_ME_SINGLE',
+  template: `REPLACE_ME_BACKTICK with evaluation: ${40 + 2}`,
+};
+
+// Drill 3.2: Nested Brackets & Matching (% / ci( / ca( / di[ / da{)
+// • Put cursor on the opening '(' below and press '%' to jump to its matching partner.
+// • Inside [10, 20, 30], type 'di[' to clear the array contents.
+// • Inside { level: "deep" }, type 'ci{' to replace the entire inner object.
+// • Put cursor on "TARGET", type 'ci"' to replace it without disturbing outer brackets.
+function evaluateExpression() {
+  return computeMetrics("BASE", [10, 20, 30, { level: "deep", marker: ("TARGET" + 99) }], { enabled: true });
+}
+
+// Drill 3.3: Tag Text Objects (cit, cat, vit, dat)
+// • Place cursor inside "Active Status" below -> type 'cit' to rewrite the tag contents!
+// • Place cursor on <span ...> and type 'dat' to delete the entire element including tags.
+const statusBadge = (
+  <div className="badge-container">
+    <span className="inline-flex px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full">
+      Active Status
+    </span>
+  </div>
+);
+
+// === STATION 4: MINI.NVIM SUPERPOWERS =========================================
+//
+// Drill 4.1: mini.splitjoin (gS)
+// • Put cursor anywhere inside SINGLE_LINE_CONFIG and press 'gS' -> watch it expand to multi-line!
+// • Then put cursor inside MULTI_LINE_COORDINATES and press 'gS' -> watch it collapse to one line!
+const SINGLE_LINE_CONFIG = { id: "corne-v4", layout: "split-42", layers: 4, encoders: 2, bluetooth: true };
+
+const MULTI_LINE_COORDINATES = [
+  120.45,
+  -34.92,
+  88.13,
+  45.0,
+];
+
+// Drill 4.2: mini.surround (sa, sd, sr)
+// • Replace double quotes on "change_to_single" with single quotes: sr"'
+// • Delete outer parentheses around (1000 + 250): sd(
+// • Surround inner word plain_identifier with backticks: place cursor on it, type: saiw`
+// • Surround the entire return value below with curly braces: visual select, then sa}
+function getSurroundSamples() {
+  const quoteTarget = "change_to_single";
+  const mathTarget = (1000 + 250);
+  const rawIdentifier = plain_identifier;
+  return quoteTarget;
+}
+
+// Drill 4.3: mini.align (ga / gA)
+// • Visually select the 5 variable lines below (type 'vip') and press: ga=
+//   Watch all 5 equals signs snap into a neat column!
+// • Try 'gA=' to preview the alignment live as you type options.
+let serverHostname = "127.0.0.1";
+let listeningPort = 8080;
+let requestTimeoutMs = 15000;
+let maxRetryCount = 3;
+let telemetryEnabled = true;
+
+// Drill 4.4: mini.move (<M-j>, <M-k>, <M-h>, <M-l>)
+// • Put cursor on 'Step 3' below.
+// • Press Alt+j (or Alt+Down) to push the line down, or Alt+k to float it up.
+// • Reorder the array so steps 1 through 4 are in clean ascending sequence:
+const deploymentSequence = [
+  "Step 1: Compile TypeScript bundle and type-check",
+  "Step 3: Run comprehensive integration test suite",
+  "Step 2: Provision ephemeral database container",
+  "Step 4: Tag release and publish deployment artifacts",
+];
+
+// === STATION 5: BLOCK VISUAL (<C-v>) & MACROS (qa...q / @@) ==================
+//
+// Drill 5.1: Block Visual Column Editing (<C-v>)
+// • Place cursor on the first quote of "alpha" below.
+// • Press <C-v>, press 3j to select the column down to "delta".
+// • Press 'I' (capital I), type: '  item_' (or similar), press <Esc>.
+// • Notice how all 4 lines got the inserted prefix simultaneously!
+const rawBatchItems = [
+  "alpha",
+  "bravo",
+  "charlie",
+  "delta",
+];
+
+// Drill 5.2: Macro Recording (qa...q / @a / @@)
+// • Place cursor on line 'user_id' below.
+// • Record macro into register 'a' to convert each string into an uppercase constant:
+//     qa 0 Iexport const KEY_<Esc> ea = "<Esc> pa";<Esc> + q
+// • Now play it on the next line: @a
+// • Repeat for the remaining lines: @@
+const macroTargets = [
+  "user_id",
+  "account_email",
+  "tenant_code",
+  "billing_tier",
+];
+
+// === STATION 6: DIAGNOSTIC NAVIGATION (<F8> / <S-F8> / ]d / [d / <Leader>xX) =
+// Goal: Test your Corne Layer-2 rotary encoder and diagnostic jump shortcuts.
+// The function below contains 3 deliberate TypeScript type diagnostics.
+// Turn your rotary encoder or press <F8> to jump forward into each error.
+// The floating window will open automatically. Press <S-F8> to jump backward!
+function deliberateDiagnosticStops(): void {
+  // Diagnostic 1: Type 'number' is not assignable to type 'string'
+  const textSample: string = 404;
+
+  // Diagnostic 2: Property 'nonExistentMethod' does not exist on type 'Date'
+  const today = new Date();
+  today.nonExistentMethod();
+
+  // Diagnostic 3: Argument of type 'boolean' is not assignable to parameter of type 'number'
+  Math.max(10, 20, true);
+}
+
+// === STATION 7: TREESITTER STRUCTURAL OBJECTS & FLASH (af, if, ac, ic, s, S) ==
+// • Inside getPerimeter(), type 'vif' (visual inside function) or 'daf' (delete around function).
+// • Inside the RectangleGeometry class, type 'vac' (visual around class) or 'yac' (yank around class).
+// • Test Flash Jump: Press 's', type two characters of any word on screen, then press the jump badge.
+// • Test Flash Treesitter: Press 'S' to highlight and expand AST syntax node selections!
+class RectangleGeometry {
+  constructor(
+    public readonly width: number,
+    public readonly height: number,
+  ) {}
+
+  public getArea(): number {
+    return this.width * this.height;
+  }
+
+  public getPerimeter(): number {
+    const horizontalSpan = this.width * 2;
+    const verticalSpan = this.height * 2;
+    return horizontalSpan + verticalSpan;
+  }
+
+  public isSquare(): boolean {
+    return this.width === this.height;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// PART 2: REAL-WORLD APPLICATION CODEBASE (FREE-ROAM NAVIGATION)
+// Practice large jumps (gg, G, { }, ( ), %, *, #, gd, grr, <Leader>cs, <Leader>/)
+// -----------------------------------------------------------------------------
 
 type Priority = "low" | "normal" | "high" | "urgent";
 type Identifier = string & { readonly __brand: unique symbol };
@@ -477,3 +674,4 @@ main().catch((error: unknown) => {
   process.exitCode = 1;
 });
 
+// vim: set ft=typescriptreact:

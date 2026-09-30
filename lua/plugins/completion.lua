@@ -39,20 +39,12 @@ blink.setup {
     documentation = { auto_show = false, auto_show_delay_ms = 500 },
   },
   sources = {
-    default = { 'lazydev', 'lsp', 'copilot', 'path', 'snippets', 'buffer' },
+    default = { 'lazydev', 'lsp', 'path', 'snippets', 'buffer' },
     providers = {
       lazydev = {
         name = 'LazyDev',
         module = 'lazydev.integrations.blink',
         score_offset = 100,
-      },
-      -- Copilot requests are asynchronous, so ordinary LSP/path/snippet
-      -- completion remains responsive while the network result is pending.
-      copilot = {
-        name = 'Copilot',
-        module = 'blink-cmp-copilot',
-        score_offset = 100,
-        async = true,
       },
     },
   },

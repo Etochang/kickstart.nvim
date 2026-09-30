@@ -51,7 +51,7 @@ require('gitsigns').setup {
     map('n', '<leader>hi', gitsigns.preview_hunk_inline, 'Git preview hunk [I]nline')
     map('n', '<leader>hb', function() gitsigns.blame_line { full = true } end, 'Git [B]lame line')
     map('n', '<leader>hd', gitsigns.diffthis, 'Git [D]iff against index')
-    map('n', '<leader>hD', function() gitsigns.diffthis '@' end, 'Git [D]iff against last commit')
+    map('n', '<leader>hD', function() gitsigns.diffthis '~' end, 'Git [D]iff against last commit')
     map('n', '<leader>hQ', function() gitsigns.setqflist 'all' end, 'Git hunks in repository')
     map('n', '<leader>hq', gitsigns.setqflist, 'Git hunks in buffer')
     map('n', '<leader>tb', gitsigns.toggle_current_line_blame, '[T]oggle Git [B]lame')

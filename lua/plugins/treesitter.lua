@@ -33,6 +33,7 @@ require('nvim-treesitter').install(parsers)
 ---@param language string
 local function attach(bufnr, language)
   if not vim.treesitter.language.add(language) then return end
+  if not vim.api.nvim_buf_is_valid(bufnr) then return end
   vim.treesitter.start(bufnr, language)
 
   -- Use Tree-sitter indentation when the parser ships a compatible query;
